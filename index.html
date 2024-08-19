@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ollama Chat Interface</title>
+    <title>LLM Chat Bot (Uncensored)</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -98,6 +98,24 @@
         }
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(100, 100, 100, 0.8);
+		}
+        }.waiting {
+            font-style: italic;
+            color: #888;
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #888;
+            border-top: 2px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -114,55 +132,104 @@
 
     <script>
         const chatContainer = document.getElementById('chat-container');
-        const userInput = document.getElementById('user-input');
-        const ollamaEndpoint = "http://192.168.50.10:11434/api/generate";
-        const modelName = "vanilj/llama-3.1-70b-instruct-lorablated-iq2_xs:latest";
+		const userInput = document.getElementById('user-input');
+		var iframe = null;
+		var urlParams = new URLSearchParams(window.location.search);
+		var roomID = "YcyPBML4Lv";
+		var password = "false";
+		var messageID = 0;
+		var conversationHistory = [];
 
-        async function sendMessage() {
-            const message = userInput.value.trim();
-            if (message === '') return;
+		if (urlParams.has("session")) {
+			roomID = urlParams.get("session");
+		}
+			
+		if (urlParams.has("password")) {
+			password = urlParams.get("password");
+		}
 
-            addMessageToChat('user', message);
-            userInput.value = '';
+		async function sendMessage() {
+			const message = userInput.value.trim();
+			if (message === '') return;
+			messageID += 1;
+			addMessageToChat('user', message, messageID);
+			addWaitingMessage(messageID);
+			userInput.value = '';
 
-            try {
-                const response = await fetch(ollamaEndpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: modelName,
-                        prompt: message,
-                        stream: false
-                    })
-                });
+			// Add the user's message to the conversation history
+			conversationHistory.push({ role: 'user', content: message });
 
-                const data = await response.json();
-                addMessageToChat('assistant', data.response);
-            } catch (error) {
-                console.error("Error:", error);
-                addMessageToChat('assistant', "Sorry, there was an error processing your request.");
-            }
-        }
+			var data = {};
+			data.value = formatConversationForLlama(conversationHistory);
+			data.target = messageID;
+			data.action = "chatbot";
 
-        function addMessageToChat(role, content) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', role);
-            messageDiv.textContent = content;
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
+			iframe.contentWindow.postMessage({ sendData: { overlayNinja: data }, type: "rpcs" }, "*");
+		}
 
-        function newConversation() {
-            chatContainer.innerHTML = '';
-        }
+		function formatConversationForLlama(history) {
+			return history.map(msg => `${msg.role}: ${msg.content}`).join('\n') + '\nassistant:';
+		}
 
-        userInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
+		function addMessageToChat(role, content, id) {
+			const messageDiv = document.createElement('div');
+			messageDiv.classList.add('message', role);
+			messageDiv.setAttribute('data-message-id', id);
+			messageDiv.textContent = content;
+			chatContainer.appendChild(messageDiv);
+			chatContainer.scrollTop = chatContainer.scrollHeight;
+		}
+
+		function addWaitingMessage(id) {
+			const waitingDiv = document.createElement('div');
+			waitingDiv.classList.add('message', 'assistant', 'waiting');
+			waitingDiv.setAttribute('data-message-id', id);
+			waitingDiv.innerHTML = '<div class="spinner"></div>Waiting for response...';
+			chatContainer.appendChild(waitingDiv);
+			chatContainer.scrollTop = chatContainer.scrollHeight;
+		}
+
+		function updateWaitingMessage(id, content) {
+			const waitingMessage = document.querySelector(`.waiting[data-message-id="${id}"]`);
+			if (waitingMessage) {
+				waitingMessage.classList.remove('waiting');
+				waitingMessage.innerHTML = content;
+			} else {
+				addMessageToChat('assistant', content, id);
+			}
+			
+			// Add the assistant's response to the conversation history
+			conversationHistory.push({ role: 'assistant', content: content });
+			
+			chatContainer.scrollTop = chatContainer.scrollHeight;
+		}
+
+		function newConversation() {
+			chatContainer.innerHTML = '';
+			messageID = 0;
+			conversationHistory = []; // Clear the conversation history
+		}
+
+		userInput.addEventListener('keypress', function(e) {
+			if (e.key === 'Enter') {
+				sendMessage();
+			}
+		});
+
+		document.addEventListener('DOMContentLoaded', () => {
+			iframe = document.createElement("iframe");
+			iframe.src = `https://vdo.socialstream.ninja/?ln&password=${password}&salt=vdo.ninja&label=chatbot&view=${roomID}&scene&novideo&noaudio&cleanoutput&room=${roomID}`;
+			
+			iframe.style.cssText = "width: 0px; height: 0px; position: fixed; left: -100px; top: -100px;";
+			document.body.appendChild(iframe);
+			window.addEventListener("message", function (e) {
+				if (e.source != iframe.contentWindow) return;
+				if (e.data.dataReceived && e.data.dataReceived.overlayNinja && e.data.dataReceived.overlayNinja.chatbotResponse && e.data.dataReceived.overlayNinja.chatbotResponse.value) {
+					const response = e.data.dataReceived.overlayNinja.chatbotResponse;
+					updateWaitingMessage(response.target, response.value);
+				}
+			});
+		});
     </script>
 </body>
 </html>
