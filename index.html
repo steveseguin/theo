@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLM Chat Bot (Uncensored)</title>
+    <title>Ollama Chat Interface</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -137,7 +137,6 @@
 		var urlParams = new URLSearchParams(window.location.search);
 		var roomID = "YcyPBML4Lv";
 		var password = "false";
-		var messageID = 0;
 		var conversationHistory = [];
 
 		if (urlParams.has("session")) {
@@ -151,7 +150,7 @@
 		async function sendMessage() {
 			const message = userInput.value.trim();
 			if (message === '') return;
-			messageID += 1;
+			let messageID = Math.random()*999999999999;
 			addMessageToChat('user', message, messageID);
 			addWaitingMessage(messageID);
 			userInput.value = '';
