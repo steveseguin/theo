@@ -246,7 +246,6 @@
 		}
 
 		function updateWaitingMessage(id, content, chunk=false) {
-			console.log(id,content, chunk);
 			const waitingMessage = document.querySelector(`[data-response-id="${id}"]`);
 			if (waitingMessage) {
 				waitingMessage.classList.remove('waiting');
