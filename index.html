@@ -146,11 +146,12 @@
 		if (urlParams.has("password")) {
 			password = urlParams.get("password");
 		}
-
+		let currentID = 0;
+		
 		async function sendMessage() {
 			const message = userInput.value.trim();
 			if (message === '') return;
-			let messageID = Math.random()*999999999999;
+			let messageID = parseInt(Math.random()*99999999);
 			addMessageToChat('user', message, messageID);
 			addWaitingMessage(messageID);
 			userInput.value = '';
@@ -162,6 +163,7 @@
 			data.value = formatConversationForLlama(conversationHistory);
 			data.target = messageID;
 			data.action = "chatbot";
+			data.turbo = false; // true to use a faster model with shorter responses; useful if you have a slow/limited computer/gpu
 
 			iframe.contentWindow.postMessage({ sendData: { overlayNinja: data }, type: "rpcs" }, "*");
 		}
@@ -178,34 +180,51 @@
 			chatContainer.appendChild(messageDiv);
 			chatContainer.scrollTop = chatContainer.scrollHeight;
 		}
+		
+		var messageChunks = {};
 
 		function addWaitingMessage(id) {
 			const waitingDiv = document.createElement('div');
 			waitingDiv.classList.add('message', 'assistant', 'waiting');
-			waitingDiv.setAttribute('data-message-id', id);
+			waitingDiv.setAttribute('data-response-id', id);
 			waitingDiv.innerHTML = '<div class="spinner"></div>Waiting for response...';
 			chatContainer.appendChild(waitingDiv);
+			if (currentID in messageChunks){
+				conversationHistory.push({ role: 'assistant', content: messageChunks[currentID].join("") });
+				messageChunks = {};
+			}
+			currentID = id;
+			messageChunks[id] = [];
 			chatContainer.scrollTop = chatContainer.scrollHeight;
 		}
 
-		function updateWaitingMessage(id, content) {
-			const waitingMessage = document.querySelector(`.waiting[data-message-id="${id}"]`);
+		function updateWaitingMessage(id, content, chunk=false) {
+			console.log(id,content, chunk);
+			const waitingMessage = document.querySelector(`[data-response-id="${id}"]`);
 			if (waitingMessage) {
 				waitingMessage.classList.remove('waiting');
-				waitingMessage.innerHTML = content;
-			} else {
-				addMessageToChat('assistant', content, id);
-			}
 			
-			// Add the assistant's response to the conversation history
-			conversationHistory.push({ role: 'assistant', content: content });
-			
-			chatContainer.scrollTop = chatContainer.scrollHeight;
+				if (chunk){
+					if (messageChunks[id]){
+						messageChunks[id].push(content);
+						waitingMessage.innerHTML = messageChunks[id].join("").replaceAll("\n","<br>");
+					}
+				} else {
+					if (messageChunks[id]){
+						delete messageChunks[id];
+					}
+					waitingMessage.innerHTML = content.replaceAll("\n","<br>");
+					conversationHistory.push({ role: 'assistant', content: content });
+				}
+				chatContainer.scrollTop = chatContainer.scrollHeight;
+			} 
 		}
 
 		function newConversation() {
 			chatContainer.innerHTML = '';
 			messageID = 0;
+			currentID = 0;
+			messageChunks = {};
 			conversationHistory = []; // Clear the conversation history
 		}
 
@@ -223,7 +242,10 @@
 			document.body.appendChild(iframe);
 			window.addEventListener("message", function (e) {
 				if (e.source != iframe.contentWindow) return;
-				if (e.data.dataReceived && e.data.dataReceived.overlayNinja && e.data.dataReceived.overlayNinja.chatbotResponse && e.data.dataReceived.overlayNinja.chatbotResponse.value) {
+				if (e.data.dataReceived && e.data.dataReceived.overlayNinja && e.data.dataReceived.overlayNinja.chatbotChunk && e.data.dataReceived.overlayNinja.chatbotChunk.value) {
+					const response = e.data.dataReceived.overlayNinja.chatbotChunk;
+					updateWaitingMessage(response.target, response.value, true);
+				} else if (e.data.dataReceived && e.data.dataReceived.overlayNinja && e.data.dataReceived.overlayNinja.chatbotResponse && e.data.dataReceived.overlayNinja.chatbotResponse.value) {
 					const response = e.data.dataReceived.overlayNinja.chatbotResponse;
 					updateWaitingMessage(response.target, response.value);
 				}
