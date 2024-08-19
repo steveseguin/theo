@@ -131,8 +131,14 @@
     </div>
 
     <script>
-        const chatContainer = document.getElementById('chat-container');
+        	const chatContainer = document.getElementById('chat-container');
 		const userInput = document.getElementById('user-input');
+
+		userInput.focus(); 
+		window.onload = ()=> {
+			userInput.focus();
+		};
+
 		var iframe = null;
 		var urlParams = new URLSearchParams(window.location.search);
 		var roomID = "YcyPBML4Lv";
