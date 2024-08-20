@@ -217,7 +217,7 @@
 			}
 
 			var data = {};
-			data.value = formatConversationForLlama(conversationHistory);
+			data.value = addedInstruction+formatConversationForLlama(conversationHistory);
 			data.target = messageID;
 			data.action = "chatbot";
 			data.turbo = false; // true to use a faster model with shorter responses; useful if you have a slow/limited computer/gpu
