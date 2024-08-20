@@ -195,6 +195,10 @@
 		}
 		let currentID = 0;
 		
+		function containsMatch(targetString, stringList) {
+		  return stringList.some(item => targetString.toLowerCase().includes(item.toLowerCase()));
+		}
+		
 		async function sendMessage() {
 			const message = userInput.value.trim();
 			if (message === '') return;
@@ -205,12 +209,19 @@
 
 			// Add the user's message to the conversation history
 			conversationHistory.push({ role: 'user', content: message });
+			
+			let addedInstruction = "";
+			
+			if (containsMatch(message, ["Theo","theo,","theo."," theo","THEO", "theo ", "Theo!"])){
+				addedInstruction = "You are an AI assistant named Theo.\n";
+			}
 
 			var data = {};
 			data.value = formatConversationForLlama(conversationHistory);
 			data.target = messageID;
 			data.action = "chatbot";
 			data.turbo = false; // true to use a faster model with shorter responses; useful if you have a slow/limited computer/gpu
+			
 
 			iframe.contentWindow.postMessage({ sendData: { overlayNinja: data }, type: "rpcs" }, "*");
 		}
