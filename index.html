@@ -26,10 +26,15 @@
             padding: 30px;
             backdrop-filter: blur(10px);
         }
-	div > br:first-child,
-	div > br:last-child {
+	reflection > br:first-child,
+	reflection > br:last-child,
+	output > br:first-child,
+	output > br:last-child,
+	thinking > br:first-child,
+	thinking > br:last-child {
 		display: none;
 	}
+	    
         h1 {
             text-align: center;
             color: #f0f0f0;
@@ -110,7 +115,10 @@
             background: rgba(100, 100, 100, 0.8);
         }
         thinking {
-    		font-style: italic;
+    	    font-style: italic;
+        }
+	output {
+    	    font-style: bold;
         }
         .waiting {
             font-style: italic;
