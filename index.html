@@ -270,7 +270,10 @@ Make sure all <tags> are on separate lines with no other text. Do not include ot
 			data.target = messageID;
 			data.action = "chatbot";
 			data.turbo = false; // true to use a faster model with shorter responses; useful if you have a slow/limited computer/gpu
-			
+
+			if (new URLSearchParams(window.location.search).get('model')){
+				data.model = new URLSearchParams(window.location.search).get('model');
+			}
 
 			iframe.contentWindow.postMessage({ sendData: { overlayNinja: data }, type: "rpcs" }, "*");
 		}
