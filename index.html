@@ -388,7 +388,7 @@ Make sure all <tags> are on separate lines with no other text. Do not include ot
 				if (e.data.dataReceived && e.data.dataReceived.overlayNinja && e.data.dataReceived.overlayNinja.chatbotChunk && ("value" in e.data.dataReceived.overlayNinja.chatbotChunk)) {
 					const response = e.data.dataReceived.overlayNinja.chatbotChunk;
 					updateWaitingMessage(response.target, response.value || "", true);
-				} else if (e.data.dataReceived && e.data.dataReceived.overlayNinja && e.data.dataReceived.overlayNinja.chatbotResponse && && ("value" in e.data.dataReceived.overlayNinja.chatbotChunk)) {
+				} else if (e.data.dataReceived && e.data.dataReceived.overlayNinja && e.data.dataReceived.overlayNinja.chatbotResponse && ("value" in e.data.dataReceived.overlayNinja.chatbotChunk)) {
 					const response = e.data.dataReceived.overlayNinja.chatbotResponse;
 					updateWaitingMessage(response.target, response.value || "");
 				}
