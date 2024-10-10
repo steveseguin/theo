@@ -297,6 +297,7 @@ Make sure all <tags> are on separate lines with no other text. Do not include ot
 			data.value = addedInstruction+formatConversationForLlama(conversationHistory);
 			data.target = messageID;
 			data.action = "chatbot";
+			data.model = "vanilj/llama-3.1-70b-instruct-lorablated-iq2_xs:latest";
 			data.turbo = false; // true to use a faster model with shorter responses; useful if you have a slow/limited computer/gpu
 
 			if (new URLSearchParams(window.location.search).get('model')){
