@@ -362,7 +362,7 @@
 				    });
 		
 				    const totalSize = estimateMessageSize(base64, userMessage);
-		
+				    print(totalSize);
 				    if (totalSize <= maxMessageSize) {
 					bestResult = base64;
 					if (maxQuality - minQuality < 0.05) break;
