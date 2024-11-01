@@ -208,6 +208,59 @@
         #mic-button.active #mic-icon {
             fill: #ff0000;
         }
+       .input-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .image-preview-container {
+            display: none;
+            position: relative;
+            margin: 10px 0;
+            max-width: 200px;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            border-radius: 8px;
+            border: 2px solid #4a4a4a;
+        }
+
+        .remove-image {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ff4444;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .image-upload-button {
+            background: linear-gradient(45deg, #4a90e2, #357abd);
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-upload-button:hover {
+            background: linear-gradient(45deg, #357abd, #2868a0);
+        }
+
+        #image-input {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -229,6 +282,8 @@
     <script>
         	const chatContainer = document.getElementById('chat-container');
 		const userInput = document.getElementById('user-input');
+	        let currentImageFile = null;
+        	let currentImage = null;
 
 		userInput.focus(); 
 		window.onload = ()=> {
@@ -253,61 +308,147 @@
 		function containsMatch(targetString, stringList) {
 		  return stringList.some(item => targetString.toLowerCase().includes(item.toLowerCase()));
 		}
+
+		function estimateMessageSize(base64Image, userMessage = '') {
+		    // base64 encoding increases size by roughly 4/3
+		    const base64Overhead = Math.ceil(base64Image.length * (4/3));
+		    // Account for the rest of the message structure
+		    return base64Overhead + (userMessage?.length || 0) + 100; // 100 bytes buffer for json structure
+		}
+		
+		async function processImageForWebRTC(file, maxMessageSize = 262144, maxDimension = 1120, userMessage = '') {
+		    return new Promise((resolve, reject) => {
+			const img = new Image();
+			const reader = new FileReader();
+		
+			reader.onload = function(e) {
+			    img.src = e.target.result;
+			};
+		
+			img.onload = async function() {
+			    let quality = 0.9;
+			    let width = img.width;
+			    let height = img.height;
+		
+			    if (width > maxDimension || height > maxDimension) {
+				const ratio = Math.min(maxDimension / width, maxDimension / height);
+				width = Math.floor(width * ratio);
+				height = Math.floor(height * ratio);
+			    }
+		
+			    const canvas = document.createElement('canvas');
+			    canvas.width = width;
+			    canvas.height = height;
+			    const ctx = canvas.getContext('2d');
+			    ctx.drawImage(img, 0, 0, width, height);
+		
+			    let minQuality = 0.1;
+			    let maxQuality = 0.9;
+			    let bestResult = null;
+			    let attempts = 0;
+			    const maxAttempts = 8;
+		
+			    while (attempts < maxAttempts) {
+				try {
+				    const blob = await new Promise(resolve => {
+					canvas.toBlob(resolve, 'image/webp', quality);
+				    });
+		
+				    const base64 = await new Promise((resolve) => {
+					const reader = new FileReader();
+					reader.onloadend = () => resolve(reader.result.split(',')[1]);
+					reader.readAsDataURL(blob);
+				    });
+		
+				    const totalSize = estimateMessageSize(base64, userMessage);
+		
+				    if (totalSize <= maxMessageSize) {
+					bestResult = base64;
+					if (maxQuality - minQuality < 0.05) break;
+					minQuality = quality;
+				    } else {
+					maxQuality = quality;
+				    }
+		
+				    quality = (minQuality + maxQuality) / 2;
+				} catch (error) {
+				    reject(error);
+				    return;
+				}
+				attempts++;
+			    }
+		
+			    if (bestResult) {
+				resolve(bestResult);
+			    } else {
+				reject(new Error('Could not compress image to target size'));
+			    }
+			};
+		
+			img.onerror = () => reject(new Error('Failed to load image'));
+			reader.readAsDataURL(file);
+		    });
+		}
 		
 		async function sendMessage() {
-			const message = finalTranscript || userInput.value.trim();
-			if (message === '') return;
-			finalTranscript = '';
-			let messageID = parseInt(Math.random()*99999999);
-			addMessageToChat('user', message, messageID);
-			addWaitingMessage(messageID);
-			userInput.value = '';
-
-			// Add the user's message to the conversation history
-			conversationHistory.push({ role: 'user', content: message });
-			
-			let addedInstruction = "";
-			
-			if (containsMatch(message, ["Theo","theo,","theo."," theo","THEO", "theo ", "Theo!", " name", "name?"])){
-				addedInstruction = "You are an AI assistant named Theo.\n";
-			} else if (new URLSearchParams(window.location.search).has('reflection')){
-				addedInstruction =`You are an AI assistant designed to provide detailed, step-by-step responses. Your outputs should follow this structure:
-
-1. Begin with a <thinking> section.
-2. Inside the thinking section:
-   a. Briefly analyze the question and outline your approach.
-   b. Present a clear plan of steps to solve the problem.
-   c. Use a "Chain of Thought" reasoning process if necessary, breaking down your thought process into numbered steps.
-3. Include a <reflection> section for each idea where you:
-   a. Review your reasoning.
-   b. Check for potential errors or oversights.
-   c. Confirm or adjust your conclusion if necessary.
-4. Be sure to close all reflection sections.
-5. Close the thinking section with </thinking>.
-6. Provide your final answer in an <output> section.
-
-Always use these tags in your responses. Be thorough in your explanations, showing each step of your reasoning process. Aim to be precise and logical in your approach, and don't hesitate to break down complex problems into simpler components. Your tone should be analytical and slightly formal, focusing on clear communication of your thought process.
-
-Remember: Both <thinking> and <reflection> MUST be tags and must be closed at their conclusion
-
-Make sure all <tags> are on separate lines with no other text. Do not include other text on a line containing a tag.
-
-`;
-			}
-
-			var data = {};
-			data.value = addedInstruction+formatConversationForLlama(conversationHistory);
-			data.target = messageID;
-			data.action = "chatbot";
-			data.model = "vanilj/llama-3.1-70b-instruct-lorablated-iq2_xs:latest";
-			data.turbo = false; // true to use a faster model with shorter responses; useful if you have a slow/limited computer/gpu
-
-			if (new URLSearchParams(window.location.search).get('model')){
-				data.model = new URLSearchParams(window.location.search).get('model');
-			}
-
-			iframe.contentWindow.postMessage({ sendData: { overlayNinja: data }, type: "rpcs" }, "*");
-		}
+	            const message = finalTranscript || userInput.value.trim();
+	            if (!message && !currentImageFile) return;
+	
+	            try {
+	                let messageID = parseInt(Math.random()*99999999);
+	
+	                // Process image if one is selected
+	                if (currentImageFile) {
+	                    try {
+	                        currentImage = await processImageForWebRTC(currentImageFile, 262144, 1120, message);
+	                    } catch (error) {
+	                        alert('Error processing image. The image may be too large with the current message. Try a smaller image or shorter message.');
+	                        return;
+	                    }
+	                }
+	
+	                finalTranscript = '';
+	                addMessageToChat('user', message, messageID);
+	                addWaitingMessage(messageID);
+	                userInput.value = '';
+	
+	                // Add the user's message to the conversation history
+	                conversationHistory.push({ role: 'user', content: message });
+	
+	                let addedInstruction = "";
+	                if (containsMatch(message, ["Theo","theo,","theo."," theo","THEO", "theo ", "Theo!", " name", "name?"])){
+	                    addedInstruction = "You are an AI assistant named Theo.\n";
+	                }
+	
+	                var data = {};
+	                data.value = addedInstruction+formatConversationForLlama(conversationHistory);
+	                data.target = messageID;
+	                data.action = "chatbot";
+	                data.model = "vanilj/llama-3.1-70b-instruct-lorablated-iq2_xs:latest";
+	
+	                if (currentImage) {
+	                    data.images = [currentImage];
+	                    data.model = "x/llama3.2-vision:latest";
+	                    
+	                    // Clear the image after sending
+	                    const imagePreviewContainer = document.querySelector('.image-preview-container');
+	                    const imageInput = document.getElementById('image-input');
+	                    imagePreviewContainer.style.display = 'none';
+	                    imageInput.value = '';
+	                    currentImageFile = null;
+	                    currentImage = null;
+	                }
+	
+	                if (new URLSearchParams(window.location.search).get('model')){
+	                    data.model = new URLSearchParams(window.location.search).get('model');
+	                }
+	
+	                iframe.contentWindow.postMessage({ sendData: { overlayNinja: data }, type: "rpcs" }, "*");
+	            } catch (error) {
+	                console.error('Error sending message:', error);
+	                alert('Error sending message. Please try again.');
+	            }
+	        }
 
 		function formatConversationForLlama(history) {
 			return history.map(msg => `${msg.role}: ${msg.content}`).join('\n') + '\nassistant:';
@@ -396,7 +537,73 @@ Make sure all <tags> are on separate lines with no other text. Do not include ot
 					updateWaitingMessage(response.target, response.value || "");
 				}
 			});
-		});
+			const imageInput = document.createElement('input');
+			imageInput.type = 'file';
+			imageInput.id = 'image-input';
+			imageInput.accept = 'image/*';
+			
+			const imagePreviewContainer = document.createElement('div');
+			imagePreviewContainer.className = 'image-preview-container';
+			
+			const imagePreview = document.createElement('img');
+			imagePreview.className = 'image-preview';
+			
+			const removeButton = document.createElement('button');
+			removeButton.className = 'remove-image';
+			removeButton.innerHTML = '×';
+			
+			const uploadButton = document.createElement('button');
+			uploadButton.className = 'image-upload-button';
+			uploadButton.innerHTML = `
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+			    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+			    <circle cx="12" cy="13" r="4"/>
+			</svg>
+			`;
+			
+			// Setup the input container
+			const inputContainer = document.getElementById('input-container');
+			const inputRow = document.createElement('div');
+			inputRow.className = 'input-row';
+			
+			imagePreviewContainer.appendChild(imagePreview);
+			imagePreviewContainer.appendChild(removeButton);
+			inputContainer.insertBefore(imageInput, inputContainer.firstChild);
+			inputContainer.insertBefore(imagePreviewContainer, inputContainer.firstChild);
+			
+			// Add upload button to the input row
+			inputRow.appendChild(uploadButton);
+			// Move existing buttons to the input row
+			Array.from(inputContainer.children)
+				.filter(child => child.tagName === 'BUTTON')
+				.forEach(button => inputRow.appendChild(button));
+			
+			// Insert the input row after the user input
+			userInput.parentNode.insertBefore(inputRow, userInput.nextSibling);
+			
+			// Event listeners for image handling
+			uploadButton.addEventListener('click', () => imageInput.click());
+			
+			imageInput.addEventListener('change', function(event) {
+			const file = event.target.files[0];
+			if (file && file.type.startsWith('image/')) {
+			    currentImageFile = file;
+			    const reader = new FileReader();
+			    reader.onloadend = function() {
+				imagePreview.src = reader.result;
+				imagePreviewContainer.style.display = 'inline-block';
+			    };
+			    reader.readAsDataURL(file);
+			}
+			});
+			
+			removeButton.addEventListener('click', function() {
+				imagePreviewContainer.style.display = 'none';
+				imageInput.value = '';
+				currentImageFile = null;
+				currentImage = null;
+			});
+	        });
 
 		let recognition;
 		const micButton = document.getElementById('mic-button');
