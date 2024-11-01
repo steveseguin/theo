@@ -351,7 +351,7 @@
 			    while (attempts < maxAttempts) {
 				try {
 				    const blob = await new Promise(resolve => {
-					canvas.toBlob(resolve, 'image/webp', quality);
+					canvas.toBlob(resolve, 'image/jpeg', quality);
 				    });
 		
 				    const base64 = await new Promise((resolve) => {
