@@ -442,7 +442,9 @@
 	                if (new URLSearchParams(window.location.search).get('model')){
 	                    data.model = new URLSearchParams(window.location.search).get('model');
 	                }
-	
+			    
+			console.log(data);
+
 	                iframe.contentWindow.postMessage({ sendData: { overlayNinja: data }, type: "rpcs" }, "*");
 	            } catch (error) {
 	                console.error('Error sending message:', error);
