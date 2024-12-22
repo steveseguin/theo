@@ -477,11 +477,12 @@
 		}
 		
 		function copyMessageContent(messageEl) {
-			if (!messageEl) return;
+			if (!messageEl || !messageEl.querySelector('.message-content')) return;
 
+			const contentEl = messageEl.querySelector('.message-content');
 			let textContent = messageEl.classList.contains('assistant') ? 
-				messageEl.querySelector('.message-content').getAttribute('data-markdown') : 
-				messageEl.querySelector('.message-content').textContent;
+				contentEl.getAttribute('data-markdown') || contentEl.textContent : 
+				contentEl.textContent;
 
 			navigator.clipboard.writeText(textContent).then(() => {
 				const copyButton = messageEl.querySelector('.copy-button');
@@ -670,7 +671,7 @@
 						</svg>`;
 					copyButton.onclick = (e) => {
 						e.stopPropagation();
-						copyMessageContent(id);
+						copyMessageContent(waitingMessage);
 					};
 					waitingMessage.appendChild(copyButton);
 					conversationHistory.push({ role: 'assistant', content: content });
