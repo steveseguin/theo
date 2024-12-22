@@ -322,6 +322,42 @@
 			padding-left: 1em;
 			color: #ccc;
 		}
+		
+		.message {
+			position: relative;
+		}
+
+		.copy-button {
+			position: absolute;
+			top: 8px;
+			right: 8px;
+			background: rgba(106, 90, 205, 0.2);
+			border: none;
+			border-radius: 4px;
+			padding: 4px;
+			cursor: pointer;
+			opacity: 0;
+			transition: opacity 0.2s;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.message:hover .copy-button {
+			opacity: 1;
+		}
+
+		.copy-button:hover {
+			background: rgba(106, 90, 205, 0.4);
+			transform: none;
+			box-shadow: none;
+		}
+
+		.copy-button svg {
+			width: 16px;
+			height: 16px;
+			fill: #fff;
+		}
     </style>
 </head>
 <body>
@@ -459,6 +495,29 @@
 		    });
 		}
 		
+		function copyMessageContent(messageId) {
+			const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+			if (!messageEl) return;
+
+			let textContent = messageEl.classList.contains('assistant') ? 
+				messageEl.querySelector('.message-content').getAttribute('data-markdown') : 
+				messageEl.querySelector('.message-content').textContent;
+
+			navigator.clipboard.writeText(textContent).then(() => {
+				const copyButton = messageEl.querySelector('.copy-button');
+				const originalSVG = copyButton.innerHTML;
+				
+				copyButton.innerHTML = `
+					<svg viewBox="0 0 24 24">
+						<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+					</svg>`;
+					
+				setTimeout(() => {
+					copyButton.innerHTML = originalSVG;
+				}, 2000);
+			});
+		}
+		
 		async function sendMessage() {
 	            const message = finalTranscript || userInput.value.trim();
 	            if (!message && !currentImageFile) return;
@@ -530,12 +589,29 @@
 			messageDiv.classList.add('message', role);
 			messageDiv.setAttribute('data-message-id', id);
 			
+			const contentDiv = document.createElement('div');
+			contentDiv.classList.add('message-content');
+			
 			if (role === 'assistant') {
-				messageDiv.innerHTML = marked.parse(content);
+				contentDiv.innerHTML = marked.parse(content);
+				contentDiv.setAttribute('data-markdown', content);
 			} else {
-				messageDiv.textContent = content;
+				contentDiv.textContent = content;
 			}
 			
+			const copyButton = document.createElement('button');
+			copyButton.classList.add('copy-button');
+			copyButton.innerHTML = `
+				<svg viewBox="0 0 24 24">
+					<path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+				</svg>`;
+			copyButton.onclick = (e) => {
+				e.stopPropagation();
+				copyMessageContent(id);
+			};
+			
+			messageDiv.appendChild(contentDiv);
+			messageDiv.appendChild(copyButton);
 			chatContainer.appendChild(messageDiv);
 			chatContainer.scrollTop = chatContainer.scrollHeight;
 		}
@@ -571,13 +647,52 @@
 				if (chunk) {
 					if (messageChunks[id]) {
 						messageChunks[id].push(content);
-						waitingMessage.innerHTML = marked.parse(messageChunks[id].join(""));
+						const fullContent = messageChunks[id].join("");
+						const contentDiv = waitingMessage.querySelector('.message-content') || document.createElement('div');
+						contentDiv.classList.add('message-content');
+						contentDiv.innerHTML = marked.parse(fullContent);
+						contentDiv.setAttribute('data-markdown', fullContent);
+						
+						if (!waitingMessage.querySelector('.message-content')) {
+							waitingMessage.innerHTML = '';
+							waitingMessage.appendChild(contentDiv);
+							
+							const copyButton = document.createElement('button');
+							copyButton.classList.add('copy-button');
+							copyButton.innerHTML = `
+								<svg viewBox="0 0 24 24">
+									<path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+								</svg>`;
+							copyButton.onclick = (e) => {
+								e.stopPropagation();
+								copyMessageContent(id);
+							};
+							waitingMessage.appendChild(copyButton);
+						}
 					}
 				} else {
 					if (messageChunks[id]) {
 						delete messageChunks[id];
 					}
-					waitingMessage.innerHTML = marked.parse(content);
+					const contentDiv = document.createElement('div');
+					contentDiv.classList.add('message-content');
+					contentDiv.innerHTML = marked.parse(content);
+					contentDiv.setAttribute('data-markdown', content);
+					
+					waitingMessage.innerHTML = '';
+					waitingMessage.appendChild(contentDiv);
+					
+					const copyButton = document.createElement('button');
+					copyButton.classList.add('copy-button');
+					copyButton.innerHTML = `
+						<svg viewBox="0 0 24 24">
+							<path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+						</svg>`;
+					copyButton.onclick = (e) => {
+						e.stopPropagation();
+						copyMessageContent(id);
+					};
+					waitingMessage.appendChild(copyButton);
 					conversationHistory.push({ role: 'assistant', content: content });
 				}
 				chatContainer.scrollTop = chatContainer.scrollHeight;
