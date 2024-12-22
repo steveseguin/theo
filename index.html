@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Theo - LLM Chat Bot (Uncensored)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%231a1a2e;stop-opacity:1' /><stop offset='100%' style='stop-color:%2316213e;stop-opacity:1' /></linearGradient></defs><rect width='32' height='32' rx='8' fill='url(%23grad)'/><path d='M7 10l18 0M7 16l12 0M7 22l8 0' stroke='%234FD1C5' stroke-width='2' stroke-linecap='round'/><circle cx='25' cy='16' r='1.5' fill='%234FD1C5'/><circle cx='25' cy='22' r='1.5' fill='%234FD1C5'/><path d='M16 5v3M5 16h3M27 16h3M16 27v3' stroke='%234FD1C5' stroke-width='1' stroke-linecap='round'/></svg>">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -262,6 +263,65 @@
         #image-input {
             display: none;
         }
+		
+		
+		.message {
+			margin-bottom: 15px;
+			padding: 10px 15px;
+			border-radius: 15px;
+			max-width: 80%;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+			word-wrap: break-word;
+		}
+
+		.message p {
+			margin: 0 0 1em 0;
+		}
+
+		.message p:last-child {
+			margin-bottom: 0;
+		}
+
+		.message ul, .message ol {
+			margin: 0.5em 0;
+			padding-left: 2em;
+		}
+
+		.message strong {
+			font-weight: 600;
+			color: #fff;
+		}
+
+		.message em {
+			color: #ccc;
+		}
+
+		.message code {
+			background: rgba(0, 0, 0, 0.2);
+			padding: 2px 4px;
+			border-radius: 3px;
+			font-family: monospace;
+		}
+
+		.message pre {
+			background: rgba(0, 0, 0, 0.2);
+			padding: 1em;
+			border-radius: 5px;
+			overflow-x: auto;
+			margin: 0.5em 0;
+		}
+
+		.message pre code {
+			background: none;
+			padding: 0;
+		}
+
+		.message blockquote {
+			border-left: 3px solid #6a5acd;
+			margin: 0.5em 0;
+			padding-left: 1em;
+			color: #ccc;
+		}
     </style>
 </head>
 <body>
@@ -281,10 +341,18 @@
     </div>
 
     <script>
-        	const chatContainer = document.getElementById('chat-container');
+        const chatContainer = document.getElementById('chat-container');
 		const userInput = document.getElementById('user-input');
-	        let currentImageFile = null;
-        	let currentImage = null;
+		let currentImageFile = null;
+		let currentImage = null;
+
+
+		marked.setOptions({
+			breaks: true,
+			gfm: true,
+			headerIds: false,
+			mangle: false
+		});
 
 		userInput.focus(); 
 		window.onload = ()=> {
@@ -456,12 +524,18 @@
 		function formatConversationForLlama(history) {
 			return history.map(msg => `${msg.role}: ${msg.content}`).join('\n') + '\nassistant:';
 		}
-
+		
 		function addMessageToChat(role, content, id) {
 			const messageDiv = document.createElement('div');
 			messageDiv.classList.add('message', role);
 			messageDiv.setAttribute('data-message-id', id);
-			messageDiv.textContent = content;
+			
+			if (role === 'assistant') {
+				messageDiv.innerHTML = marked.parse(content);
+			} else {
+				messageDiv.textContent = content;
+			}
+			
 			chatContainer.appendChild(messageDiv);
 			chatContainer.scrollTop = chatContainer.scrollHeight;
 		}
@@ -493,21 +567,21 @@
 			const waitingMessage = document.querySelector(`[data-response-id="${id}"]`);
 			if (waitingMessage) {
 				waitingMessage.classList.remove('waiting');
-			
-				if (chunk){
-					if (messageChunks[id]){
+				
+				if (chunk) {
+					if (messageChunks[id]) {
 						messageChunks[id].push(content);
-						waitingMessage.innerHTML = messageChunks[id].join("").replaceAll("\n","<br>");
+						waitingMessage.innerHTML = marked.parse(messageChunks[id].join(""));
 					}
 				} else {
-					if (messageChunks[id]){
+					if (messageChunks[id]) {
 						delete messageChunks[id];
 					}
-					waitingMessage.innerHTML = content.replaceAll("\n","<br>");
+					waitingMessage.innerHTML = marked.parse(content);
 					conversationHistory.push({ role: 'assistant', content: content });
 				}
 				chatContainer.scrollTop = chatContainer.scrollHeight;
-			} 
+			}
 		}
 
 		function newConversation() {
