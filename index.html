@@ -533,7 +533,8 @@
 	                data.value = addedInstruction+formatConversationForLlama(conversationHistory);
 	                data.target = messageID;
 	                data.action = "chatbot";
-	                data.model = "technobyte/Llama-3.3-70B-Abliterated:IQ2_XS";
+	                //data.model = "technobyte/Llama-3.3-70B-Abliterated:IQ2_XS";
+			data.model = "vanilj/llama-3.1-70b-instruct-lorablated-iq2_xs:latest";
 	
 	                if (currentImage) {
 	                    data.images = [currentImage];
