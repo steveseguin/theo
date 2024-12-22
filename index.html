@@ -17,8 +17,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-	    max-height: 100vh;
-	    overflow: hidden;
+			max-height: 100vh;
+			overflow: hidden;
         }
         .container {
             width: 90%;
@@ -29,24 +29,7 @@
             padding: 30px;
             backdrop-filter: blur(10px);
         }
-	reflection > br:first-child,
-	reflection > br:last-child,
-	output > br:first-child,
-	output > br:last-child,
-	thinking > br:first-child,
-	thinking > br:last-child {
-		display: none;
-	}
-
-	reflection > br+br:first-child,
-	reflection > br+br:last-child,
-	output > br+br:first-child,
-	output > br+br:last-child,
-	thinking > br+br:first-child,
-	thinking > br+br:last-child {
-		display: none;
-	}
-	    
+	
         h1 {
             text-align: center;
             color: #f0f0f0;
@@ -126,10 +109,8 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(100, 100, 100, 0.8);
         }
-        thinking {
-    	    font-style: italic;
-        }
-	output {
+		
+		output {
     	    font-weight: 700;
         }
         .waiting {
@@ -495,8 +476,7 @@
 		    });
 		}
 		
-		function copyMessageContent(messageId) {
-			const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+		function copyMessageContent(messageEl) {
 			if (!messageEl) return;
 
 			let textContent = messageEl.classList.contains('assistant') ? 
@@ -607,7 +587,7 @@
 				</svg>`;
 			copyButton.onclick = (e) => {
 				e.stopPropagation();
-				copyMessageContent(id);
+				copyMessageContent(messageDiv);
 			};
 			
 			messageDiv.appendChild(contentDiv);
@@ -665,7 +645,7 @@
 								</svg>`;
 							copyButton.onclick = (e) => {
 								e.stopPropagation();
-								copyMessageContent(id);
+								copyMessageContent(waitingMessage);
 							};
 							waitingMessage.appendChild(copyButton);
 						}
