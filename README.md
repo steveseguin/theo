@@ -5,6 +5,8 @@ A secure, peer-to-peer chatbot interface that connects to self-hosted LLMs via W
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
 
+Demo: https://theo.steves.app
+
 ## Features
 
 - **Secure P2P Communication**: Utilizes WebRTC for direct peer-to-peer connections, keeping your LLM service behind your firewall
