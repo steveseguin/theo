@@ -79,10 +79,6 @@ iframe.src = `https://vdo.socialstream.ninja/?ln&password=${password}&salt=vdo.n
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Acknowledgments
 
 - VDO.Ninja for their excellent WebRTC platform
