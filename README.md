@@ -1,6 +1,6 @@
 # Theo - WebRTC-Based Private LLM Chat Interface
 
-A secure, peer-to-peer chatbot interface that connects to self-hosted LLMs via WebRTC, powered by VDO.Ninja. This implementation ensures private communications while providing a rich, modern chat experience with multimodal capabilities.
+A secure, peer-to-peer chatbot interface that connects to self-hosted LLMs via WebRTC, powered by VDO.Ninja and Social Stream Ninja. This implementation ensures private communications while providing a rich, modern chat experience with multimodal capabilities.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
@@ -24,7 +24,8 @@ Demo: https://theo.steves.app
 
 - A self-hosted LLM service
 - A modern web browser supporting WebRTC
-- Access to VDO.Ninja's service (free)
+- Social Stream Ninja (free)
+    - https://socialstream.ninja
 
 ## Setup
 
@@ -35,16 +36,19 @@ git clone https://github.com/yourusername/theo-llm-chat.git
 
 2. Configure your environment:
    - Set up your LLM endpoint
-   - Configure your VDO.Ninja room ID and credentials
+   - Configure your Social Stream Ninja session ID and credentials
    - Update any desired model parameters
 
 3. Deploy the HTML file to your web server or open locally.
+
+4. Configure Social Stream Ninja to manage the rest
+   - https://socialstream.ninja
 
 ## Configuration
 
 Key configuration options are available through URL parameters:
 
-- `session`: VDO.Ninja room identifier
+- `session`: VDO.Ninja room / SSN Session identifier
 - `password`: Optional room password
 - `model`: LLM model selection
 
@@ -84,9 +88,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Acknowledgments
 
 - VDO.Ninja for their excellent WebRTC platform
+- Ollama for making LLMs accessible
 - marked.js for markdown rendering
 - Contributors to the WebRTC standard
 
 ## Disclaimer
 
-This implementation includes support for uncensored LLM interactions. Please ensure compliance with all applicable laws and regulations in your jurisdiction when deploying this solution.
+The demo includes support for uncensored LLM interactions. Please ensure compliance with all applicable laws and regulations in your jurisdiction when deploying this solution.
