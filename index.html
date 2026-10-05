@@ -362,6 +362,8 @@
 		const userInput = document.getElementById('user-input');
 		let currentImageFile = null;
 		let currentImage = null;
+		let conversationGeneration = 0;
+		let pendingImageSend = null;
 
 
 		marked.setOptions({
@@ -500,26 +502,36 @@
 		}
 		
 		async function sendMessage() {
-	            const message = finalTranscript || userInput.value.trim();
-	            if (!message && !currentImageFile) return;
+	            if (pendingImageSend) return;
+	            const imageFile = currentImageFile;
+	            const transcript = finalTranscript;
+	            const inputValue = userInput.value;
+	            const message = transcript || inputValue.trim();
+	            if (!message && !imageFile) return;
+	            const generation = conversationGeneration;
+	            const sendToken = {};
+	            if (imageFile) pendingImageSend = sendToken;
 	
 	            try {
 	                let messageID = parseInt(Math.random()*99999999);
 	
 	                // Process image if one is selected
-	                if (currentImageFile) {
+	                let imageForMessage = null;
+	                if (imageFile) {
 	                    try {
-	                        currentImage = await processImageForWebRTC(currentImageFile, 262144, 1120, message);
+	                        imageForMessage = await processImageForWebRTC(imageFile, 262144, 1120, message);
 	                    } catch (error) {
+	                        if (generation !== conversationGeneration) return;
 	                        alert('Error processing image. The image may be too large with the current message. Try a smaller image or shorter message.');
 	                        return;
 	                    }
 	                }
 	
-	                finalTranscript = '';
+	                if (generation !== conversationGeneration) return;
+	                if (finalTranscript === transcript) finalTranscript = '';
 	                addMessageToChat('user', message, messageID);
 	                addWaitingMessage(messageID);
-	                userInput.value = '';
+	                if (userInput.value === inputValue) userInput.value = '';
 	
 	                // Add the user's message to the conversation history
 	                conversationHistory.push({ role: 'user', content: message });
@@ -536,17 +548,19 @@
 	                //data.model = "technobyte/Llama-3.3-70B-Abliterated:IQ2_XS";
 			data.model = "vanilj/llama-3.1-70b-instruct-lorablated-iq2_xs:latest";
 	
-	                if (currentImage) {
-	                    data.images = [currentImage];
+	                if (imageForMessage) {
+	                    data.images = [imageForMessage];
 	                    data.model = "x/llama3.2-vision:latest";
 	                    
-	                    // Clear the image after sending
-	                    const imagePreviewContainer = document.querySelector('.image-preview-container');
-	                    const imageInput = document.getElementById('image-input');
-	                    imagePreviewContainer.style.display = 'none';
-	                    imageInput.value = '';
-	                    currentImageFile = null;
-	                    currentImage = null;
+	                    // Only clear the attachment still owned by this send.
+	                    if (currentImageFile === imageFile) {
+	                        const imagePreviewContainer = document.querySelector('.image-preview-container');
+	                        const imageInput = document.getElementById('image-input');
+	                        imagePreviewContainer.style.display = 'none';
+	                        imageInput.value = '';
+	                        currentImageFile = null;
+	                        currentImage = null;
+	                    }
 	                }
 	
 	                if (new URLSearchParams(window.location.search).get('model')){
@@ -559,6 +573,8 @@
 	            } catch (error) {
 	                console.error('Error sending message:', error);
 	                alert('Error sending message. Please try again.');
+	            } finally {
+	                if (pendingImageSend === sendToken) pendingImageSend = null;
 	            }
 	        }
 
@@ -682,6 +698,8 @@
 		}
 
 		function newConversation() {
+			conversationGeneration++;
+			pendingImageSend = null;
 			chatContainer.innerHTML = '';
 			messageID = 0;
 			currentID = 0;
