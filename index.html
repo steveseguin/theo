@@ -599,6 +599,17 @@
 		}
 		
 		var messageChunks = {};
+		var responseHistoryEntries = {};
+
+		function updateResponseHistory(id, content) {
+			if (responseHistoryEntries[id]) {
+				responseHistoryEntries[id].content = content;
+			} else {
+				const entry = { role: 'assistant', content: content };
+				responseHistoryEntries[id] = entry;
+				conversationHistory.push(entry);
+			}
+		}
 
 		function addWaitingMessage(id) {
 			const waitingDiv = document.createElement('div');
@@ -607,8 +618,7 @@
 			waitingDiv.innerHTML = '<div class="spinner"></div>Waiting for response...';
 			chatContainer.appendChild(waitingDiv);
 			if (currentID in messageChunks){
-				conversationHistory.push({ role: 'assistant', content: messageChunks[currentID].join("") });
-				messageChunks = {};
+				updateResponseHistory(currentID, messageChunks[currentID].join(""));
 			}
 			currentID = id;
 			messageChunks[id] = [];
@@ -630,6 +640,9 @@
 					if (messageChunks[id]) {
 						messageChunks[id].push(content);
 						const fullContent = messageChunks[id].join("");
+						if (responseHistoryEntries[id]) {
+							updateResponseHistory(id, fullContent);
+						}
 						const contentDiv = waitingMessage.querySelector('.message-content') || document.createElement('div');
 						contentDiv.classList.add('message-content');
 						contentDiv.innerHTML = marked.parse(fullContent);
@@ -675,7 +688,7 @@
 						copyMessageContent(waitingMessage);
 					};
 					waitingMessage.appendChild(copyButton);
-					conversationHistory.push({ role: 'assistant', content: content });
+					updateResponseHistory(id, content);
 				}
 				chatContainer.scrollTop = chatContainer.scrollHeight;
 			}
@@ -686,6 +699,7 @@
 			messageID = 0;
 			currentID = 0;
 			messageChunks = {};
+			responseHistoryEntries = {};
 			conversationHistory = []; // Clear the conversation history
 		}
 
